@@ -41,6 +41,8 @@ public class AuditLogEntity {
     private String browser;
 
     private String activity;
+    @Column(name = "method_name")
+    private String methodName;
 
     @Column(name = "other_fields")
     private String otherFields;
@@ -56,6 +58,15 @@ public class AuditLogEntity {
 
     @Column(name = "username")
     private String username;
+
+    @Column(name = "request_url")
+    private String requestUrl;
+
+    @Column(name = "request")
+    private String request;
+
+    @Column(name = "response")
+    private String response;
 
     public static AuditLogEntity builder(AuditLog auditLog) {
         AuditLogEntity auditLogEntity = new AuditLogEntity();
@@ -73,6 +84,10 @@ public class AuditLogEntity {
             auditLogEntity.setPhoneNumber(auditLog.getPhoneNumber());
             auditLogEntity.setUsername(auditLog.getUsername());
             auditLogEntity.setCustomerNumber(auditLog.getCustomerNumber());
+            auditLogEntity.setRequest(auditLog.getRequest());
+            auditLogEntity.setResponse(auditLog.getResponse());
+            auditLogEntity.setMethodName(auditLog.getMethodName());
+            auditLogEntity.setRequestUrl(auditLog.getRequestUrl());
         }
         return auditLogEntity;
     }

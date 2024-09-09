@@ -5,28 +5,33 @@ import com.audit.constant.AppConstant;
 import com.audit.dto.AuditLog;
 import com.audit.entity.AuditLogEntity;
 import com.audit.repository.AuditLogRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.antlr.v4.runtime.misc.Pair;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.AbstractMap;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringJoiner;
-
-import static com.audit.constant.AppConstant.HEADER_DEVICE_NAME;
+import java.util.stream.Collectors;
 
 @Aspect
 @Component
@@ -36,6 +41,7 @@ import static com.audit.constant.AppConstant.HEADER_DEVICE_NAME;
 public class AuditLogAspect {
 
     private final AuditLogRepository auditLogRepository;
+    private final ObjectMapper objectMapper;
 
     @After("@annotation(audited)")
     public void createAuditLogRecord(JoinPoint joinPoint, Audited audited) {
@@ -46,6 +52,16 @@ public class AuditLogAspect {
         audit(audited, joinPoint, methodSignature, httpRequest, auditLog);
 
         saveAuditLog(auditLog);
+    }
+
+    @AfterReturning(pointcut = "execution(* com.audit.controller..*(..))", returning = "response")
+    public void logResponse(JoinPoint joinPoint, Object response) {
+        // Capture response details here
+    }
+
+    @AfterThrowing(pointcut = "execution(* com.yourpackage.controller..*(..))", throwing = "exception")
+    public void logException(JoinPoint joinPoint, Exception exception) {
+        // Capture exception details here
     }
 
     private void saveAuditLog(AuditLog auditLog) {
@@ -60,7 +76,10 @@ public class AuditLogAspect {
         auditLog.setDevice(httpRequest.getHeader(AppConstant.HEADER_DEVICE_NAME));
         auditLog.setOperatingSystem(httpRequest.getHeader(AppConstant.HEADER_OPERATING_SYSTEM));
         auditLog.setBrowser(httpRequest.getHeader(AppConstant.HEADER_BROWSER));
-        auditLog.setActivity(method.getName());
+        auditLog.setMethodName(method.getName());
+        auditLog.setActivity(audited.activity());
+        auditLog.setRequest(getRequestBody(joinPoint));
+        auditLog.setRequestUrl(httpRequest.getRequestURI());
 
         String idToken = httpRequest.getHeader(AppConstant.HEADER_ID_TOKEN);
         try {
@@ -146,7 +165,7 @@ public class AuditLogAspect {
 
             switch (key) {
                 case "customerId":
-                    if(auditLog.getCustomerId() == null){
+                    if (auditLog.getCustomerId() == null) {
                         assert objValue != null;
                         auditLog.setCustomerId(Long.valueOf(objValue));
                     }
@@ -171,5 +190,22 @@ public class AuditLogAspect {
 
         auditLog.setOtherFields(audited.shouldStoreAll() ? fields.toString() : auditLog.getOtherFields());
         return auditLog;
+    }
+
+    private String getRequestBody(JoinPoint request) {
+        try {
+            StringBuilder json = new StringBuilder();
+            Object[] args = request.getArgs();
+
+            // Iterate through method arguments
+            for (Object arg : args) {
+                json.append(objectMapper.writeValueAsString(arg));
+                System.out.println("Request body as JSON: " + json);
+            }
+            return json.toString();
+        } catch (Exception ex) {
+            return null;
+        }
+
     }
 }

@@ -14,7 +14,9 @@ public class TestController {
     @GetMapping("/hello")
     @Audited(
             index = 0,
-            shouldStoreAll = true
+            shouldStoreAll = true,
+            activity = "get_hello"
+
     )
     public String hello() {
         return "Hello";
@@ -25,9 +27,10 @@ public class TestController {
     @Audited(
             index = 0,
             shouldStoreAll = true,
-            fieldsToAudit = {"customerId", "name", "test.customerNumber"}
+            fieldsToAudit = {"customerId", "name", "test.customerNumber"},
+            activity = "save_customer"
     )
-    public ResponseEntity<CustomerDTO> hello(@RequestBody CustomerDTO customerDTO) {
+    public ResponseEntity<CustomerDTO> saveCustomer(@RequestBody CustomerDTO customerDTO) {
         return ResponseEntity.ok().body(customerDTO);
     }
 }

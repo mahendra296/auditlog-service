@@ -15,4 +15,5 @@ public @interface Audited {
         String[] fieldsToAudit() default {};
         Identifier identifier() default Identifier.NONE;
         String identifierKey() default "";
+        String activity() default "";
 }
